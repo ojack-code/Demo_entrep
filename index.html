@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PV Business Plan</title>
+  <meta name="description" content="Générateur de business plans pour centrales photovoltaïques en autoconsommation">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="brand">
+      <span class="logo">☀</span>
+      <div>
+        <strong>PV Business Plan</strong>
+        <small>Centrales photovoltaïques</small>
+      </div>
+    </div>
+    <button id="btn-new" class="btn primary block">+ Nouveau projet</button>
+    <ul id="project-list"></ul>
+    <div class="sidebar-foot">
+      <button id="btn-export" class="btn ghost small">Exporter (sauvegarde)</button>
+      <label class="btn ghost small">Importer
+        <input type="file" id="input-import" accept="application/json" hidden>
+      </label>
+      <p class="hint">Les projets sont enregistrés dans ce navigateur. Exportez régulièrement pour les sauvegarder ou les transférer.</p>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div id="empty" class="empty">
+      <h1>Bienvenue</h1>
+      <p>Créez un premier projet pour générer automatiquement son business plan.</p>
+      <button id="btn-new-empty" class="btn primary">+ Créer un projet</button>
+    </div>
+
+    <div id="workspace" hidden>
+      <header class="toolbar">
+        <h1 id="project-title"></h1>
+        <nav class="tabs">
+          <button data-view="form" class="tab active">Données</button>
+          <button data-view="plan" class="tab">Business plan</button>
+        </nav>
+        <div class="actions">
+          <button id="btn-print" class="btn primary small">Imprimer / PDF</button>
+          <button id="btn-duplicate" class="btn ghost small">Dupliquer</button>
+          <button id="btn-delete" class="btn danger small">Supprimer</button>
+        </div>
+      </header>
+
+      <section id="view-form" class="view">
+        <div class="photo-box">
+          <div id="photo-preview" class="photo-preview"><span>Aucune photo</span></div>
+          <div class="photo-actions">
+            <label class="btn ghost small">Ajouter / changer la photo
+              <input type="file" id="input-photo" accept="image/*" hidden>
+            </label>
+            <button id="btn-photo-remove" class="btn ghost small">Retirer</button>
+          </div>
+        </div>
+        <form id="project-form" autocomplete="off"></form>
+        <div id="quick-kpis" class="quick-kpis"></div>
+      </section>
+
+      <section id="view-plan" class="view" hidden>
+        <article id="plan" class="plan"></article>
+      </section>
+    </div>
+  </main>
+
+  <script src="db.js"></script>
+  <script src="calc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
