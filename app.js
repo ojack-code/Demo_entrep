@@ -63,12 +63,13 @@ function render() {
 function renderList() {
   const ul = $('#project-list');
   ul.innerHTML = state.projects.map(p => {
-    const r = compute(p);
+    const missing = validate(p).length;
+    const status = missing ? `<span class="todo">à compléter (${missing})</span>` : 'retour ' + yrs(compute(p).k.paybackProjet);
     return `<li class="${p.id === state.currentId ? 'active' : ''}" data-id="${p.id}">
       <div class="thumb">${p.photo ? `<img src="${p.photo}" alt="">` : '☀'}</div>
       <div class="meta">
         <strong>${esc(p.nom || 'Sans nom')}</strong>
-        <small>${p.puissanceCrete ? esc(p.puissanceCrete) + ' kWc · ' : ''}retour ${yrs(r.k.paybackProjet)}</small>
+        <small>${p.puissanceCrete ? esc(p.puissanceCrete) + ' kWc · ' : ''}${status}</small>
       </div>
     </li>`;
   }).join('');
@@ -82,21 +83,43 @@ function renderForm(p) {
       <div class="grid">
         ${sec.fields.map(f => fieldHtml(f, p[f.k])).join('')}
       </div>
-    </fieldset>`).join('');
+    </fieldset>`).join('') + '<p class="legend-req"><b class="req">*</b> champ obligatoire — les champs facultatifs laissés vides comptent pour 0.</p>';
+  updateValidity(p);
 }
 
 function fieldHtml(f, v) {
   const val = esc(v ?? '');
+  const ph = f.ph ? ` placeholder="${esc(f.ph)}"` : '';
   let input;
-  if (f.t === 'textarea') input = `<textarea name="${f.k}" rows="2">${val}</textarea>`;
-  else if (f.t === 'select') input = `<select name="${f.k}">${f.o.map(o => `<option${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
-  else input = `<input name="${f.k}" type="${f.t}" value="${val}"${f.step ? ` step="${f.step}"` : ''}${f.t === 'number' ? ' inputmode="decimal"' : ''}>`;
-  return `<label class="field${f.wide ? ' wide' : ''}">
+  if (f.t === 'textarea') input = `<textarea name="${f.k}" rows="2"${ph}>${val}</textarea>`;
+  else if (f.t === 'select') input = `<select name="${f.k}">${f.o.map(o => `<option value="${esc(o)}"${o === (v ?? '') ? ' selected' : ''}>${esc(o || '— choisir —')}</option>`).join('')}</select>`;
+  else input = `<input name="${f.k}" type="${f.t}" value="${val}"${ph}${f.step ? ` step="${f.step}"` : ''}${f.t === 'number' ? ' inputmode="decimal" min="0"' : ''}>`;
+  return `<label class="field${f.wide ? ' wide' : ''}" data-field="${f.k}">
     <span class="lbl">${f.l}${f.req ? ' <b class="req">*</b>' : ''}</span>
     <span class="ctl">${input}${f.u ? `<em>${f.u}</em>` : ''}</span>
+    <small class="err"></small>
     ${f.help ? `<small>${f.help}</small>` : ''}
   </label>`;
 }
+
+/* Met en évidence les champs obligatoires manquants (sans reconstruire le formulaire). */
+function updateValidity(p) {
+  const errors = Object.fromEntries(validate(p).map(e => [e.k, e.msg]));
+  document.querySelectorAll('#project-form .field').forEach(el => {
+    const k = el.dataset.field;
+    const msg = errors[k];
+    el.classList.toggle('invalid', !!msg);
+    el.querySelector('.err').textContent = msg ? 'Obligatoire : ' + msg : '';
+    const star = el.querySelector('.req');
+    if (star) star.hidden = !isRequired(FIELDS[k], p);
+  });
+}
+
+const missingHtml = errors => `
+  <div class="missing">
+    <strong>Business plan indisponible : ${errors.length} information(s) obligatoire(s) manquante(s)</strong>
+    <ul>${errors.map(e => `<li>${esc(e.l)} — ${e.msg}</li>`).join('')}</ul>
+  </div>`;
 
 function renderPhoto(p) {
   $('#photo-preview').innerHTML = p.photo ? `<img src="${p.photo}" alt="Photo de la centrale">` : '<span>Aucune photo de la centrale</span>';
@@ -104,6 +127,11 @@ function renderPhoto(p) {
 }
 
 function renderQuickKpis(p) {
+  const errors = validate(p);
+  if (errors.length) {
+    $('#quick-kpis').innerHTML = `<h3>Aperçu instantané</h3>${missingHtml(errors)}`;
+    return;
+  }
   const { k, warnings } = compute(p);
   $('#quick-kpis').innerHTML = `
     <h3>Aperçu instantané</h3>
@@ -123,7 +151,16 @@ const kpi = (label, value, cls = '') => `<div class="kpi ${cls}"><span>${label}<
 
 /* ---------- Business plan ---------- */
 function renderPlan(p) {
-  const { k, years, loan, warnings, p: v } = compute(p);
+  const errors = validate(p);
+  if (errors.length) {
+    state.charts.forEach(c => c.destroy());
+    state.charts = [];
+    $('#plan').innerHTML = `${missingHtml(errors)}
+      <button type="button" class="btn primary" id="btn-goto-form">← Compléter les données</button>`;
+    $('#btn-goto-form').onclick = () => { state.view = 'form'; render(); };
+    return;
+  }
+  const { k, years, loan, warnings, contrat, p: v } = compute(p);
   const today = new Date().toLocaleDateString('fr-FR');
   const row = (a, b) => `<tr><th>${a}</th><td>${b}</td></tr>`;
 
@@ -194,8 +231,8 @@ function renderPlan(p) {
         ${row('Fournisseur', esc(v.fournisseur) || '—')}
         ${row('Option tarifaire', esc(v.optionTarifaire) || '—')}
         ${row('Puissance souscrite', v.puissanceSouscrite ? nf0.format(v.puissanceSouscrite) + ' kVA' : '—')}
-        ${row('Coût de l’abonnement', v.coutAbonnement ? eur(v.coutAbonnement) + ' / an' : '—')}
         ${row('N° PDL / PRM', esc(v.pdl) || '—')}
+        ${row('Prix du kWh (part énergie)', nf4.format(v.prixKwh) + ' €/kWh')}
       </table>
     </div>
     ${v.description ? `<p class="desc">${esc(v.description).replace(/\n/g, '<br>')}</p>` : ''}
@@ -217,9 +254,10 @@ function renderPlan(p) {
   <section class="page">
     <h2>4. Hypothèses économiques</h2>
     <table class="kv">
-      ${row('Prix d’achat de l’électricité', nf4.format(v.prixKwh) + ' €/kWh, +' + nf2.format(v.inflationElec) + ' %/an')}
-      ${row('Tarif de vente du surplus', nf4.format(v.prixRachat) + ' €/kWh pendant ' + nf0.format(v.dureeContrat) + ' ans' + (v.indexRachat ? ', indexé +' + nf2.format(v.indexRachat) + ' %/an' : ''))}
-      ${row('Prix de vente après contrat', nf4.format(v.prixApresContrat) + ' €/kWh')}
+      ${row('Prix du kWh effacé par l’autoconsommation', nf4.format(v.prixKwh) + ' €/kWh, +' + nf2.format(v.inflationElec) + ' %/an')}
+      ${row('Abonnement électricité', 'Non affecté par l’autoconsommation, exclu des économies')}
+      ${row('Tarif de vente du surplus', nf4.format(v.prixRachat) + ' €/kWh pendant ' + nf0.format(contrat) + ' ans' + (v.indexRachat ? ', indexé +' + nf2.format(v.indexRachat) + ' %/an' : ''))}
+      ${contrat < k.N ? row('Prix de vente après contrat', nf4.format(v.prixApresContrat) + ' €/kWh') : ''}
       ${row('Maintenance + assurance', eur(v.maintenance + v.assurance) + ' / an, +' + nf2.format(v.inflationOpex) + ' %/an')}
       ${row('Remplacement de l’onduleur', v.coutOnduleur ? eur(v.coutOnduleur) + ' en année ' + nf0.format(v.anneeOnduleur) : '—')}
       ${row('Durée d’analyse', k.N + ' ans')}
@@ -374,6 +412,7 @@ $('#project-form').addEventListener('input', e => {
   if (!p || !f) return;
   p[f.k] = f.t === 'number' ? (e.target.value === '' ? '' : parseFloat(e.target.value)) : e.target.value;
   if (f.k === 'nom') $('#project-title').textContent = p.nom || 'Sans nom';
+  updateValidity(p);
   renderQuickKpis(p);
   renderList();
   scheduleSave(p);
@@ -396,6 +435,12 @@ $('#btn-photo-remove').onclick = () => {
 };
 
 $('#btn-print').onclick = () => {
+  const missing = validate(current()).length;
+  if (missing) {
+    alert(`Impossible d’imprimer : ${missing} information(s) obligatoire(s) manquante(s).`);
+    state.view = 'form'; render();
+    return;
+  }
   if (state.view !== 'plan') { state.view = 'plan'; render(); }
   setTimeout(() => window.print(), 150);
 };

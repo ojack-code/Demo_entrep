@@ -8,8 +8,9 @@ Aucune installation, aucun serveur : c'est une page web statique, hébergeable g
 
 - **Plusieurs projets** enregistrés, avec création, duplication et suppression.
 - **Fiche projet** : nom, porteur, adresse, date de mise en service, notes, **photo de la centrale**.
-- **Abonnement électricité** : fournisseur, option tarifaire, puissance souscrite, coût annuel, n° PDL.
+- **Abonnement électricité** : fournisseur, option tarifaire, puissance souscrite, n° PDL et **prix du kWh (part énergie)**. Le coût de l'abonnement n'est pas utilisé : il reste dû et n'est pas effacé par l'autoconsommation.
 - **Données de calcul** : production, consommation à considérer pour l'autoconsommation, prix du kWh, tarif de vente du surplus, investissement, subventions, charges, **montant, taux et durée de l'emprunt**.
+- **Aucune valeur par défaut** : les champs marqués * sont obligatoires ; tant qu'il en manque, le business plan n'est pas généré et la liste des champs à compléter s'affiche. Les champs facultatifs laissés vides comptent pour 0 (la durée du contrat de vente vide = toute la durée d'analyse). Taux et durée d'emprunt ne sont pas exigés si le montant emprunté est 0.
 - **Business plan généré** : synthèse et conclusion rédigées, présentation, caractéristiques techniques, hypothèses, plan de financement, tableau d'amortissement, graphiques, compte prévisionnel sur 25 ans, indicateurs (temps de retour, TRI, VAN, LCOE).
 - **Export PDF** via le bouton « Imprimer / PDF » (choisir « Enregistrer au format PDF »).
 - **Sauvegarde / transfert** : export et import de tous les projets en fichier JSON.

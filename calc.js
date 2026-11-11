@@ -1,53 +1,56 @@
 /* Schéma des données d'un projet et moteur de calcul du business plan. */
 
+/* Aucune valeur par défaut : les champs `req` doivent être saisis pour générer le business plan.
+   Les champs numériques facultatifs laissés vides valent 0. `ph` = exemple affiché en grisé. */
 const SCHEMA = [
   { title: 'Identification du projet', fields: [
-    { k: 'nom', l: 'Nom du projet', t: 'text', d: 'Nouveau projet', wide: true },
-    { k: 'porteur', l: 'Porteur du projet / client', t: 'text', d: '' },
-    { k: 'dateMES', l: 'Mise en service prévue', t: 'date', d: '' },
-    { k: 'adresse', l: 'Adresse du site', t: 'textarea', d: '', wide: true },
-    { k: 'description', l: 'Description / notes', t: 'textarea', d: '', wide: true },
+    { k: 'nom', l: 'Nom du projet', t: 'text', req: true, wide: true, ph: 'ex. Centrale toiture hangar' },
+    { k: 'porteur', l: 'Porteur du projet / client', t: 'text' },
+    { k: 'dateMES', l: 'Mise en service prévue', t: 'date' },
+    { k: 'adresse', l: 'Adresse du site', t: 'textarea', wide: true },
+    { k: 'description', l: 'Description / notes', t: 'textarea', wide: true },
   ]},
-  { title: 'Abonnement électricité', fields: [
-    { k: 'fournisseur', l: 'Fournisseur', t: 'text', d: '' },
-    { k: 'optionTarifaire', l: 'Option tarifaire', t: 'select', d: 'Base',
-      o: ['Base', 'Heures pleines / creuses', 'Tempo', 'EJP', 'Tarif jaune / vert', 'Offre de marché', 'Autre'] },
-    { k: 'puissanceSouscrite', l: 'Puissance souscrite', t: 'number', u: 'kVA', d: 9, step: 1 },
-    { k: 'coutAbonnement', l: 'Coût de l’abonnement', t: 'number', u: '€/an', d: 180, step: 1 },
-    { k: 'pdl', l: 'N° PDL / PRM', t: 'text', d: '' },
+  { title: 'Abonnement et prix de l’électricité', fields: [
+    { k: 'fournisseur', l: 'Fournisseur', t: 'text' },
+    { k: 'optionTarifaire', l: 'Option tarifaire', t: 'select',
+      o: ['', 'Base', 'Heures pleines / creuses', 'Tempo', 'EJP', 'Tarif jaune / vert', 'Offre de marché', 'Autre'] },
+    { k: 'puissanceSouscrite', l: 'Puissance souscrite', t: 'number', u: 'kVA', step: 1 },
+    { k: 'pdl', l: 'N° PDL / PRM', t: 'text' },
+    { k: 'prixKwh', l: 'Prix du kWh (part énergie, hors abonnement)', t: 'number', u: '€/kWh', step: 0.0001, req: true, ph: 'ex. 0,2016',
+      help: 'Seul le prix du kWh consommé est effacé par l’autoconsommation ; l’abonnement reste dû et n’est pas compté dans les économies. En HP/HC, indiquez un prix moyen pondéré.' },
+    { k: 'inflationElec', l: 'Hausse annuelle du prix du kWh', t: 'number', u: '%/an', step: 0.1, ph: 'ex. 3' },
   ]},
   { title: 'Installation et énergie', fields: [
-    { k: 'puissanceCrete', l: 'Puissance crête', t: 'number', u: 'kWc', d: 9, step: 0.1 },
-    { k: 'production', l: 'Production annuelle estimée', t: 'number', u: 'kWh/an', d: 10800, step: 1, req: true },
-    { k: 'consommation', l: 'Consommation à considérer pour l’autoconsommation', t: 'number', u: 'kWh/an', d: 6000, step: 1, req: true,
+    { k: 'puissanceCrete', l: 'Puissance crête', t: 'number', u: 'kWc', step: 0.1 },
+    { k: 'production', l: 'Production annuelle estimée', t: 'number', u: 'kWh/an', step: 1, req: true, min: 1 },
+    { k: 'consommation', l: 'Consommation à considérer pour l’autoconsommation', t: 'number', u: 'kWh/an', step: 1, req: true,
       help: 'Part de la consommation pouvant être couverte par la production (consommation simultanée).' },
-    { k: 'degradation', l: 'Dégradation des panneaux', t: 'number', u: '%/an', d: 0.5, step: 0.1 },
+    { k: 'degradation', l: 'Dégradation des panneaux', t: 'number', u: '%/an', step: 0.1, ph: 'ex. 0,5' },
   ]},
-  { title: 'Prix de l’énergie', fields: [
-    { k: 'prixKwh', l: 'Prix d’achat du kWh', t: 'number', u: '€/kWh', d: 0.2016, step: 0.0001, req: true },
-    { k: 'inflationElec', l: 'Hausse annuelle du prix de l’électricité', t: 'number', u: '%/an', d: 3, step: 0.1 },
-    { k: 'prixRachat', l: 'Tarif de vente du surplus', t: 'number', u: '€/kWh', d: 0.04, step: 0.0001 },
-    { k: 'indexRachat', l: 'Indexation du tarif de vente', t: 'number', u: '%/an', d: 0, step: 0.1 },
-    { k: 'dureeContrat', l: 'Durée du contrat de vente', t: 'number', u: 'ans', d: 20, step: 1 },
-    { k: 'prixApresContrat', l: 'Prix de vente après contrat', t: 'number', u: '€/kWh', d: 0.03, step: 0.0001 },
+  { title: 'Vente du surplus', fields: [
+    { k: 'prixRachat', l: 'Tarif de vente du surplus', t: 'number', u: '€/kWh', step: 0.0001, req: true, ph: 'ex. 0,04',
+      help: 'Saisir 0 s’il n’y a pas de vente.' },
+    { k: 'indexRachat', l: 'Indexation du tarif de vente', t: 'number', u: '%/an', step: 0.1 },
+    { k: 'dureeContrat', l: 'Durée du contrat de vente', t: 'number', u: 'ans', step: 1, help: 'Vide = toute la durée d’analyse.' },
+    { k: 'prixApresContrat', l: 'Prix de vente après contrat', t: 'number', u: '€/kWh', step: 0.0001 },
   ]},
   { title: 'Investissement et charges', fields: [
-    { k: 'capex', l: 'Coût total de l’installation', t: 'number', u: '€', d: 18000, step: 1, req: true },
-    { k: 'subvention', l: 'Subventions / prime à l’autoconsommation', t: 'number', u: '€', d: 720, step: 1 },
-    { k: 'maintenance', l: 'Maintenance', t: 'number', u: '€/an', d: 150, step: 1 },
-    { k: 'assurance', l: 'Assurance', t: 'number', u: '€/an', d: 60, step: 1 },
-    { k: 'inflationOpex', l: 'Hausse annuelle des charges', t: 'number', u: '%/an', d: 2, step: 0.1 },
-    { k: 'coutOnduleur', l: 'Remplacement onduleur', t: 'number', u: '€', d: 1500, step: 1 },
-    { k: 'anneeOnduleur', l: 'Année du remplacement', t: 'number', u: 'année', d: 12, step: 1 },
+    { k: 'capex', l: 'Coût total de l’installation', t: 'number', u: '€', step: 1, req: true, min: 1 },
+    { k: 'subvention', l: 'Subventions / prime à l’autoconsommation', t: 'number', u: '€', step: 1 },
+    { k: 'maintenance', l: 'Maintenance', t: 'number', u: '€/an', step: 1 },
+    { k: 'assurance', l: 'Assurance', t: 'number', u: '€/an', step: 1 },
+    { k: 'inflationOpex', l: 'Hausse annuelle des charges', t: 'number', u: '%/an', step: 0.1 },
+    { k: 'coutOnduleur', l: 'Remplacement onduleur', t: 'number', u: '€', step: 1 },
+    { k: 'anneeOnduleur', l: 'Année du remplacement', t: 'number', u: 'année', step: 1 },
   ]},
   { title: 'Financement', fields: [
-    { k: 'emprunt', l: 'Montant emprunté', t: 'number', u: '€', d: 15000, step: 1, req: true },
-    { k: 'taux', l: 'Taux d’intérêt annuel', t: 'number', u: '%', d: 4, step: 0.01, req: true },
-    { k: 'dureeEmprunt', l: 'Durée de l’emprunt', t: 'number', u: 'ans', d: 10, step: 1, req: true },
+    { k: 'emprunt', l: 'Montant emprunté', t: 'number', u: '€', step: 1, req: true, help: 'Saisir 0 si le projet est autofinancé.' },
+    { k: 'taux', l: 'Taux d’intérêt annuel', t: 'number', u: '%', step: 0.01, req: true },
+    { k: 'dureeEmprunt', l: 'Durée de l’emprunt', t: 'number', u: 'ans', step: 1, req: true, min: 1 },
   ]},
   { title: 'Paramètres d’analyse', fields: [
-    { k: 'dureeAnalyse', l: 'Durée d’analyse', t: 'number', u: 'ans', d: 25, step: 1 },
-    { k: 'tauxActualisation', l: 'Taux d’actualisation (VAN)', t: 'number', u: '%', d: 4, step: 0.1 },
+    { k: 'dureeAnalyse', l: 'Durée d’analyse', t: 'number', u: 'ans', step: 1, req: true, min: 1, ph: 'ex. 25' },
+    { k: 'tauxActualisation', l: 'Taux d’actualisation (VAN)', t: 'number', u: '%', step: 0.1, ph: 'ex. 4' },
   ]},
 ];
 
@@ -55,8 +58,32 @@ const FIELDS = Object.fromEntries(SCHEMA.flatMap(s => s.fields).map(f => [f.k, f
 
 function defaultProject() {
   const p = {};
-  for (const f of Object.values(FIELDS)) p[f.k] = f.d;
+  for (const f of Object.values(FIELDS)) p[f.k] = '';
   return p;
+}
+
+const isEmpty = v => v === '' || v == null || (typeof v === 'number' && !isFinite(v));
+
+/* Champ obligatoire selon le projet : taux et durée ne sont exigés que s'il y a un emprunt. */
+function isRequired(f, p) {
+  if (!f.req) return false;
+  if ((f.k === 'taux' || f.k === 'dureeEmprunt') && !isEmpty(p.emprunt) && parseFloat(p.emprunt) === 0) return false;
+  return true;
+}
+
+/* Liste des champs obligatoires manquants ou invalides : { k, l, msg }. */
+function validate(p) {
+  const errors = [];
+  for (const f of Object.values(FIELDS)) {
+    if (!isRequired(f, p)) continue;
+    const v = p[f.k];
+    if (f.t === 'number') {
+      if (isEmpty(v)) errors.push({ k: f.k, l: f.l, msg: 'à renseigner' });
+      else if (parseFloat(v) < 0) errors.push({ k: f.k, l: f.l, msg: 'doit être positif' });
+      else if (f.min != null && parseFloat(v) < f.min) errors.push({ k: f.k, l: f.l, msg: `doit être au moins ${f.min}` });
+    } else if (!String(v ?? '').trim()) errors.push({ k: f.k, l: f.l, msg: 'à renseigner' });
+  }
+  return errors;
 }
 
 /* Tableau d'amortissement mensuel, agrégé par année. */
@@ -127,6 +154,7 @@ function compute(raw) {
   const inflO = p.inflationOpex / 100;
   const idxR = p.indexRachat / 100;
   const disc = p.tauxActualisation / 100;
+  const contrat = isEmpty(raw.dureeContrat) ? N : p.dureeContrat;
 
   const loan = loanSchedule(p.emprunt, p.taux, p.dureeEmprunt);
   const investNet = p.capex - p.subvention;
@@ -139,7 +167,7 @@ function compute(raw) {
     const autoconso = Math.min(production, p.consommation);
     const surplus = production - autoconso;
     const prixAchat = p.prixKwh * Math.pow(1 + inflE, y - 1);
-    const prixVente = y <= p.dureeContrat ? p.prixRachat * Math.pow(1 + idxR, y - 1) : p.prixApresContrat;
+    const prixVente = y <= contrat ? p.prixRachat * Math.pow(1 + idxR, y - 1) : p.prixApresContrat;
     const economies = autoconso * prixAchat;
     const ventes = surplus * prixVente;
     const charges = (p.maintenance + p.assurance) * Math.pow(1 + inflO, y - 1)
@@ -198,5 +226,5 @@ function compute(raw) {
   if (p.consommation <= 0) warnings.push('Aucune consommation autoconsommable : toute la production est vendue.');
   if (p.dureeEmprunt > N) warnings.push('La durée de l’emprunt dépasse la durée d’analyse.');
 
-  return { p, loan, years, k, warnings };
+  return { p, loan, years, k, warnings, contrat };
 }
